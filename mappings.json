@@ -1,0 +1,17 @@
+{
+  "folders": {
+    "people": "Person",
+    "organizations": "Organization",
+    "experience": "WorkExperience",
+    "projects": "CreativeWork",
+    "certifications": "EducationalOccupationalCredential"
+  },
+  "fields": {
+    "title": "name",
+    "summary": "description",
+    "tags": "keywords",
+    "date": "dateCreated",
+    "url": "url",
+    "image": "image"
+  }
+}

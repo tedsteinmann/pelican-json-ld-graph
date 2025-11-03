@@ -4,6 +4,7 @@ Utility functions for JSON-LD generation
 
 import json
 import os
+import re
 import logging
 from pathlib import Path
 
@@ -113,7 +114,6 @@ def convert_metadata_to_jsonld(metadata, entity_type, mappings):
 
             # Strip HTML tags from text fields
             if isinstance(value, str) and source_field in ('summary', 'description'):
-                import re
                 # Remove HTML tags
                 value = re.sub(r'<[^>]+>', '', value).strip()
 
@@ -131,7 +131,9 @@ def write_json_file(data, output_path, indent=2):
         output_path: Output file path
         indent: JSON indentation level
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    dir_path = os.path.dirname(output_path)
+    if dir_path:  # Only create directory if path contains a directory component
+        os.makedirs(dir_path, exist_ok=True)
 
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=indent, ensure_ascii=False)

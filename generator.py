@@ -27,12 +27,12 @@ _mappings = None
 def initialize_jsonld(pelican):
     """Initialize JSON-LD generation for a Pelican instance."""
     global _settings, _output_path, _mappings, _entities, _entity_map
-    
+
     _settings = pelican.settings
     _output_path = pelican.output_path
     _entities = []
     _entity_map = {}
-    
+
     # Load mappings
     mappings_file = _settings.get('JSONLD_MAPPINGS_FILE', 'mappings.json')
     if not os.path.isabs(mappings_file):
@@ -41,7 +41,7 @@ def initialize_jsonld(pelican):
         if base_path:
             parent_path = os.path.dirname(os.path.abspath(base_path))
             mappings_file = os.path.join(parent_path, mappings_file)
-    
+
     _mappings = load_mappings(mappings_file)
     logger.info("JSON-LD Graph Generator initialized")
 
@@ -49,18 +49,18 @@ def initialize_jsonld(pelican):
 def process_content(content):
     """
     Process a single content item (article or page).
-    
+
     Args:
         content: Pelican content object
     """
     global _entities, _entity_map, _settings, _mappings
-    
+
     if not _settings or not _mappings:
         return
-    
+
     # Get metadata
     metadata = {}
-    
+
     # Extract relevant fields
     if hasattr(content, 'title'):
         metadata['title'] = content.title
@@ -73,56 +73,56 @@ def process_content(content):
     if hasattr(content, 'url'):
         siteurl = _settings.get('SITEURL', '')
         metadata['url'] = f"{siteurl}/{content.url}" if siteurl else content.url
-    
+
     # Check for image in metadata
     if hasattr(content, 'metadata'):
         if 'image' in content.metadata:
             metadata['image'] = content.metadata['image']
-    
+
     # Determine entity type
     source_path = content.source_path if hasattr(content, 'source_path') else ""
     entity_type = get_entity_type(source_path, _mappings)
-    
+
     # Convert to JSON-LD
     entity = convert_metadata_to_jsonld(metadata, entity_type, _mappings)
-    
+
     # Store entity
     _entities.append(entity)
-    
+
     # Map entity to slug for injection
     if hasattr(content, 'slug'):
         _entity_map[content.slug] = entity
-    
+
     logger.debug(f"Processed {entity_type}: {metadata.get('title', 'Untitled')}")
 
 
 def write_jsonld_files(pelican):
     """Write JSON-LD files after all content is processed."""
     global _entities, _entity_map, _settings, _output_path
-    
+
     if not _entities:
         logger.info("No entities to export")
         return
-    
+
     logger.info(f"Starting JSON-LD graph generation with {len(_entities)} entities...")
-    
+
     # Configuration
     jsonld_output_path = _settings.get('JSONLD_OUTPUT_PATH', 'jsonld')
     graph_filename = _settings.get('JSONLD_GRAPH_FILENAME', 'graph.jsonld')
     export_individual = _settings.get('JSONLD_EXPORT_INDIVIDUAL', True)
-    
+
     # Write global graph
     graph = {
         "@context": "https://schema.org/",
         "@graph": _entities
     }
-    
+
     output_dir = os.path.join(_output_path, jsonld_output_path)
     graph_path = os.path.join(output_dir, graph_filename)
-    
+
     write_json_file(graph, graph_path, indent=2)
     logger.info(f"✅ Global graph written to {graph_path}")
-    
+
     # Export individual entities if enabled
     if export_individual:
         count = 0
@@ -130,40 +130,40 @@ def write_jsonld_files(pelican):
             entity_path = os.path.join(output_dir, f"{slug}.json")
             write_json_file(entity, entity_path, indent=2)
             count += 1
-        
+
         logger.info(f"✅ Exported {count} individual entity files")
 
 
 def inject_jsonld_into_content(content, content_path):
     """
     Inject JSON-LD script into HTML content.
-    
+
     Args:
         content: HTML content string
         content_path: Path to the content file
-        
+
     Returns:
         str: Modified HTML with JSON-LD injected
     """
     global _entity_map, _settings
-    
+
     inject_enabled = _settings.get('JSONLD_INJECT', True)
     if not inject_enabled:
         return content
-    
+
     # Extract slug from path
     slug = os.path.splitext(os.path.basename(content_path))[0]
-    
+
     if slug not in _entity_map:
         return content
-    
+
     entity = _entity_map[slug]
-    
+
     # Generate JSON-LD script tag
     json_str = json.dumps(entity, indent=2, ensure_ascii=False)
     escaped_json = escape_json_for_html(json_str)
     script_tag = f'\n<script type="application/ld+json">\n{escaped_json}\n</script>\n'
-    
+
     # Try to inject before </head>
     if '</head>' in content:
         content = content.replace('</head>', script_tag + '</head>', 1)
@@ -172,7 +172,7 @@ def inject_jsonld_into_content(content, content_path):
     elif '</body>' in content:
         content = content.replace('</body>', script_tag + '</body>', 1)
         logger.debug(f"Injected JSON-LD into <body> for {slug}")
-    
+
     return content
 
 
@@ -180,13 +180,13 @@ def content_written_handler(path, context):
     """Handle content_written signal to inject JSON-LD."""
     if not path.endswith('.html'):
         return
-    
+
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         modified_content = inject_jsonld_into_content(content, path)
-        
+
         if modified_content != content:
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(modified_content)

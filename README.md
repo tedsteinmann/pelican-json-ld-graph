@@ -146,6 +146,47 @@ cat output/jsonld/graph.jsonld | jq .
 
 ---
 
+## 📦 Migration from Folder-Based to Category-Based Approach
+
+If you're upgrading from a previous version that used folder structure for entity type detection, follow these steps:
+
+### 1. Update your `mappings.json`
+
+Change `"folders"` to `"categories"`:
+
+```json
+{
+  "categories": {
+    "people": "Person",
+    ...
+  }
+}
+```
+
+**Note**: For backward compatibility, the old `"folders"` key still works, but `"categories"` is recommended.
+
+### 2. Add category metadata to your content files
+
+For each Markdown file, add a `Category:` field in the frontmatter:
+
+```markdown
+Title: Your Article Title
+Date: 2024-01-15
+Category: people
+Summary: Your summary here
+
+Your content...
+```
+
+### 3. Benefits of the new approach
+
+- ✅ **Flexible organization**: Content can be organized in any folder structure
+- ✅ **Pelican native**: Uses Pelican's built-in category system
+- ✅ **Better SEO**: Categories are also used for site navigation and organization
+- ✅ **Easier management**: Change entity types without moving files
+
+---
+
 ## 🧪 Validation
 
 Validate your structured data here:

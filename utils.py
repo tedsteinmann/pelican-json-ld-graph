@@ -11,7 +11,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAPPINGS = {
-    "folders": {
+    "categories": {
         "people": "Person",
         "organizations": "Organization",
         "experience": "WorkExperience",
@@ -54,24 +54,24 @@ def load_mappings(mappings_path=None):
     return DEFAULT_MAPPINGS
 
 
-def get_entity_type(source_path, mappings):
+def get_entity_type(category_name, mappings):
     """
-    Infer Schema.org entity type from folder name.
+    Infer Schema.org entity type from Pelican category.
 
     Args:
-        source_path: Path to the source file
+        category_name: Category name from Pelican content (e.g., 'people', 'projects')
         mappings: Mapping configuration
 
     Returns:
         str: Schema.org type (e.g., 'Person', 'CreativeWork')
     """
-    folder_mappings = mappings.get('folders', {})
+    # Support both 'categories' (new) and 'folders' (deprecated) for backwards compatibility
+    category_mappings = mappings.get('categories', mappings.get('folders', {}))
 
-    # Get the parent directory name
-    parts = Path(source_path).parts
-    if len(parts) > 1:
-        folder_name = parts[-2]  # Parent directory
-        entity_type = folder_mappings.get(folder_name)
+    if category_name:
+        # Normalize category name to lowercase for case-insensitive matching
+        category_key = category_name.lower()
+        entity_type = category_mappings.get(category_key)
         if entity_type:
             return entity_type
 

@@ -9,7 +9,7 @@ The plugin builds a global Schema.org graph (`graph.jsonld`) and optionally inje
 ## 🧭 Features
 
 - 🔍 **Automatic JSON-LD generation** from Markdown frontmatter  
-- 🧱 **Folder-based type inference** (e.g., `people/` → `Person`, `projects/` → `CreativeWork`)  
+- 🏷️ **Category-based type inference** (e.g., `Category: people` → `Person`, `Category: projects` → `CreativeWork`)  
 - 🧩 **Custom field mapping** via `mappings.json`  
 - 🧾 **Global JSON-LD graph export** at build time  
 - 💡 **Optional HTML injection** for per-page JSON-LD blocks  
@@ -42,14 +42,20 @@ JSONLD_INJECT = True
 
 ## 📁 Directory Structure
 
+Your content can be organized in any folder structure. The plugin uses Pelican's built-in `Category` metadata field to determine entity types:
+
 ```
 your-site/
 ├── content/
-│   ├── people/
-│   ├── projects/
-│   ├── organizations/
-│   ├── experience/
-│   └── certifications/
+│   ├── articles/
+│   │   ├── person1.md        # Category: people
+│   │   ├── project1.md       # Category: projects
+│   │   └── org1.md           # Category: organizations
+│   ├── pages/
+│   │   └── about.md          # Category: people
+│   └── posts/
+│       ├── work-exp.md       # Category: experience
+│       └── cert.md           # Category: certifications
 ├── mappings.json
 ├── pelicanconf.py
 └── plugins/
@@ -60,13 +66,26 @@ your-site/
         └── README.md
 ```
 
+Each Markdown file should specify a category in its frontmatter:
+
+```markdown
+Title: Ted Steinmann
+Date: 2024-01-15
+Category: people
+Summary: Builder, systems thinker, and strategist
+
+Content goes here...
+```
+
 ---
 
 ## 🧩 Example `mappings.json`
 
+The `mappings.json` file maps Pelican categories to Schema.org types:
+
 ```json
 {
-  "folders": {
+  "categories": {
     "people": "Person",
     "organizations": "Organization",
     "experience": "WorkExperience",
@@ -83,6 +102,8 @@ your-site/
   }
 }
 ```
+
+**Note**: Category names in the mapping are case-insensitive. For backward compatibility, the plugin also supports `"folders"` as a key name (deprecated).
 
 ---
 
@@ -122,6 +143,47 @@ cat output/jsonld/graph.jsonld | jq .
   ]
 }
 ```
+
+---
+
+## 📦 Migration from Folder-Based to Category-Based Approach
+
+If you're upgrading from a previous version that used folder structure for entity type detection, follow these steps:
+
+### 1. Update your `mappings.json`
+
+Change `"folders"` to `"categories"`:
+
+```json
+{
+  "categories": {
+    "people": "Person",
+    ...
+  }
+}
+```
+
+**Note**: For backward compatibility, the old `"folders"` key still works, but `"categories"` is recommended.
+
+### 2. Add category metadata to your content files
+
+For each Markdown file, add a `Category:` field in the frontmatter:
+
+```markdown
+Title: Your Article Title
+Date: 2024-01-15
+Category: people
+Summary: Your summary here
+
+Your content...
+```
+
+### 3. Benefits of the new approach
+
+- ✅ **Flexible organization**: Content can be organized in any folder structure
+- ✅ **Pelican native**: Uses Pelican's built-in category system
+- ✅ **Better SEO**: Categories are also used for site navigation and organization
+- ✅ **Easier management**: Change entity types without moving files
 
 ---
 

@@ -79,9 +79,12 @@ def process_content(content):
         if 'image' in content.metadata:
             metadata['image'] = content.metadata['image']
 
-    # Determine entity type
-    source_path = content.source_path if hasattr(content, 'source_path') else ""
-    entity_type = get_entity_type(source_path, _mappings)
+    # Determine entity type from category
+    category_name = None
+    if hasattr(content, 'category') and content.category:
+        category_name = content.category.name
+    
+    entity_type = get_entity_type(category_name, _mappings)
 
     # Convert to JSON-LD
     entity = convert_metadata_to_jsonld(metadata, entity_type, _mappings)

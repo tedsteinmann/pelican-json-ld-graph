@@ -19,17 +19,45 @@ The plugin builds a global Schema.org graph (`graph.jsonld`) and optionally inje
 
 ## ⚙️ Installation
 
+### Option 1: Install via pip (recommended)
+
+Install directly from GitHub:
+
+```bash
+pip install git+https://github.com/tedsteinmann/pelican-json-ld-graph.git
+```
+
+Or install from PyPI (once published):
+
+```bash
+pip install pelican-json-ld-graph
+```
+
+Then add it to your `pelicanconf.py`:
+
+```python
+PLUGINS = ['pelican_json_ld_graph']
+
+# Optional configuration
+JSONLD_OUTPUT_PATH = 'jsonld'
+JSONLD_GRAPH_FILENAME = 'graph.jsonld'
+JSONLD_EXPORT_INDIVIDUAL = True
+JSONLD_INJECT = True
+```
+
+### Option 2: Manual installation
+
 Clone the plugin into your Pelican project:
 
 ```bash
-git clone https://github.com/tedsteinmann/pelican-jsonld-graph-generator.git plugins/pelican-jsonld-graph-generator
+git clone https://github.com/tedsteinmann/pelican-json-ld-graph.git plugins/pelican-json-ld-graph
 ```
 
 Then add it to your `pelicanconf.py`:
 
 ```python
 PLUGIN_PATHS = ['plugins']
-PLUGINS = ['pelican-jsonld-graph-generator']
+PLUGINS = ['pelican-json-ld-graph']
 
 # Optional configuration
 JSONLD_OUTPUT_PATH = 'jsonld'

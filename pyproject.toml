@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pelican-json-ld-graph"
+version = "1.0.0"
+description = "A Pelican plugin that generates Schema.org JSON-LD structured data from Markdown frontmatter"
+readme = "README.md"
+authors = [
+    {name = "Ted Steinmann", email = "ted@steinmann.me"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: Pelican :: Plugins",
+]
+keywords = ["pelican", "plugin", "json-ld", "schema.org", "seo", "structured-data"]
+requires-python = ">=3.8"
+dependencies = [
+    "pelican>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tedsteinmann/pelican-json-ld-graph"
+Repository = "https://github.com/tedsteinmann/pelican-json-ld-graph"
+Issues = "https://github.com/tedsteinmann/pelican-json-ld-graph/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pelican_json_ld_graph*"]
+
+[tool.setuptools.package-data]
+pelican_json_ld_graph = ["mappings.json"]
+

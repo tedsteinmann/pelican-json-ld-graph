@@ -42,4 +42,3 @@ include = ["pelican_json_ld_graph*"]
 
 [tool.setuptools.package-data]
 pelican_json_ld_graph = ["mappings.json"]
-

@@ -66,6 +66,24 @@ def process_content(content):
     if not hasattr(content, 'slug') or not content.slug:
         return
 
+    # Filter content based on status
+    # Get allowed statuses from settings, default to only 'published'
+    allowed_statuses = _settings.get('JSONLD_ALLOWED_STATUSES', ['published'])
+    
+    # Check if content has a status and if it's in the allowed list
+    if hasattr(content, 'status'):
+        content_status = str(content.status).lower()
+        if content_status not in [status.lower() for status in allowed_statuses]:
+            return
+    elif hasattr(content, 'metadata') and content.metadata and 'status' in content.metadata:
+        content_status = str(content.metadata['status']).lower()
+        if content_status not in [status.lower() for status in allowed_statuses]:
+            return
+    else:
+        # If no status is found, assume it's published (default Pelican behavior)
+        if 'published' not in [status.lower() for status in allowed_statuses]:
+            return
+
     try:
         # Get metadata
         metadata = {}

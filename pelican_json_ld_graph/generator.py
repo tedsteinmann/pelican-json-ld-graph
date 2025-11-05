@@ -101,7 +101,23 @@ def process_content(content):
         # Check for image in metadata
         if hasattr(content, 'metadata') and content.metadata:
             if 'image' in content.metadata and content.metadata['image']:
-                metadata['image'] = str(content.metadata['image'])
+                image_value = str(content.metadata['image'])
+                siteurl = _settings.get('SITEURL', '') or ''
+                print(f"DEBUG: Processing image: {image_value}, siteurl: {siteurl}")
+                
+                # Handle image URLs - make relative paths absolute
+                if image_value.startswith('/'):
+                    # It's a relative path from site root, make it absolute
+                    metadata['image'] = f"{siteurl}{image_value}" if siteurl else image_value
+                    print(f"DEBUG: Made absolute (starts with /): {metadata['image']}")
+                elif image_value.startswith(('http://', 'https://')):
+                    # It's already a full URL, use as-is
+                    metadata['image'] = image_value
+                    print(f"DEBUG: Already absolute URL: {metadata['image']}")
+                else:
+                    # It's a relative path, assume it's from site root
+                    metadata['image'] = f"{siteurl}/{image_value}" if siteurl else image_value
+                    print(f"DEBUG: Made absolute (relative): {metadata['image']}")
 
         # Determine entity type from category
         category_name = None

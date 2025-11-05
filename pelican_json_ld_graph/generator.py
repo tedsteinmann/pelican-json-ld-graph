@@ -58,6 +58,14 @@ def process_content(content):
     if not _settings or not _mappings:
         return
 
+    # Skip content that doesn't have basic attributes
+    if not hasattr(content, 'title') or not content.title:
+        return
+    
+    # Skip content that doesn't have a slug (usually indicates malformed content)
+    if not hasattr(content, 'slug') or not content.slug:
+        return
+
     try:
         # Get metadata
         metadata = {}
@@ -71,9 +79,24 @@ def process_content(content):
             metadata['tags'] = [str(tag) for tag in content.tags]
         if hasattr(content, 'date') and content.date:
             metadata['date'] = content.date
-        if hasattr(content, 'url') and content.url:
-            siteurl = _settings.get('SITEURL', '') or ''
-            metadata['url'] = f"{siteurl}/{content.url}" if siteurl else str(content.url)
+        
+        # Handle URL - check for custom URL in metadata first, then fall back to content.url
+        url_value = None
+        if hasattr(content, 'metadata') and content.metadata and 'url' in content.metadata:
+            # Use custom URL from frontmatter if it exists
+            url_value = str(content.metadata['url'])
+        elif hasattr(content, 'url') and content.url:
+            # Use generated Pelican URL
+            url_value = str(content.url)
+        
+        if url_value:
+            # If it's already a full URL (starts with http/https), use it as-is
+            if url_value.startswith(('http://', 'https://')):
+                metadata['url'] = url_value
+            else:
+                # Otherwise, prepend the site URL
+                siteurl = _settings.get('SITEURL', '') or ''
+                metadata['url'] = f"{siteurl}/{url_value}" if siteurl else url_value
 
         # Check for image in metadata
         if hasattr(content, 'metadata') and content.metadata:
@@ -97,10 +120,18 @@ def process_content(content):
         if hasattr(content, 'slug') and content.slug:
             _entity_map[str(content.slug)] = entity
 
-        logger.debug(f"Processed {entity_type}: {metadata.get('title', 'Untitled')}")
+        title = metadata.get('title', 'Untitled') or 'Untitled'
+        entity_type_str = str(entity_type) if entity_type else 'Unknown'
+        logger.debug(f"Processed {entity_type_str}: {title}")
     
     except Exception as e:
-        logger.error(f"Error processing content: {e}")
+        # Add more detailed error information
+        import traceback
+        content_title = getattr(content, 'title', 'Unknown') if hasattr(content, 'title') else 'Unknown'
+        content_slug = getattr(content, 'slug', 'Unknown') if hasattr(content, 'slug') else 'Unknown'
+        logger.error(f"Error processing content '{content_title}' (slug: {content_slug}): {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         # Don't re-raise to prevent build failures
 
 

@@ -1,7 +1,7 @@
 {
   "categories": {
     "people": "Person",
-    "organizations": "Organization",
+    "organization": "Organization",
     "experience": "WorkExperience",
     "projects": "CreativeWork",
     "presentations": "PresentationDigitalDocument",

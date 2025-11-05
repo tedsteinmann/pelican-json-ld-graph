@@ -101,6 +101,10 @@ def convert_metadata_to_jsonld(metadata, entity_type, mappings):
         if source_field in metadata:
             value = metadata[source_field]
 
+            # Handle None values
+            if value is None:
+                continue
+
             # Handle special cases
             if source_field == 'date' and hasattr(value, 'isoformat'):
                 value = value.isoformat()
@@ -115,8 +119,10 @@ def convert_metadata_to_jsonld(metadata, entity_type, mappings):
             if isinstance(value, str) and source_field in ('summary', 'description'):
                 # Remove HTML tags
                 value = re.sub(r'<[^>]+>', '', value).strip()
-
-            entity[target_field] = value
+            
+            # Ensure value is not None before adding to entity
+            if value is not None:
+                entity[target_field] = value
 
     return entity
 

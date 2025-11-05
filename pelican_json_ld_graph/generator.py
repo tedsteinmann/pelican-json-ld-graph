@@ -58,45 +58,50 @@ def process_content(content):
     if not _settings or not _mappings:
         return
 
-    # Get metadata
-    metadata = {}
+    try:
+        # Get metadata
+        metadata = {}
 
-    # Extract relevant fields
-    if hasattr(content, 'title'):
-        metadata['title'] = content.title
-    if hasattr(content, 'summary'):
-        metadata['summary'] = str(content.summary) if content.summary else ""
-    if hasattr(content, 'tags'):
-        metadata['tags'] = [str(tag) for tag in content.tags]
-    if hasattr(content, 'date'):
-        metadata['date'] = content.date
-    if hasattr(content, 'url'):
-        siteurl = _settings.get('SITEURL', '')
-        metadata['url'] = f"{siteurl}/{content.url}" if siteurl else content.url
+        # Extract relevant fields with safety checks
+        if hasattr(content, 'title') and content.title:
+            metadata['title'] = str(content.title)
+        if hasattr(content, 'summary') and content.summary:
+            metadata['summary'] = str(content.summary)
+        if hasattr(content, 'tags') and content.tags:
+            metadata['tags'] = [str(tag) for tag in content.tags]
+        if hasattr(content, 'date') and content.date:
+            metadata['date'] = content.date
+        if hasattr(content, 'url') and content.url:
+            siteurl = _settings.get('SITEURL', '') or ''
+            metadata['url'] = f"{siteurl}/{content.url}" if siteurl else str(content.url)
 
-    # Check for image in metadata
-    if hasattr(content, 'metadata'):
-        if 'image' in content.metadata:
-            metadata['image'] = content.metadata['image']
+        # Check for image in metadata
+        if hasattr(content, 'metadata') and content.metadata:
+            if 'image' in content.metadata and content.metadata['image']:
+                metadata['image'] = str(content.metadata['image'])
 
-    # Determine entity type from category
-    category_name = None
-    if hasattr(content, 'category') and content.category:
-        category_name = content.category.name
+        # Determine entity type from category
+        category_name = None
+        if hasattr(content, 'category') and content.category and content.category.name:
+            category_name = str(content.category.name)
+        
+        entity_type = get_entity_type(category_name, _mappings)
+
+        # Convert to JSON-LD
+        entity = convert_metadata_to_jsonld(metadata, entity_type, _mappings)
+
+        # Store entity
+        _entities.append(entity)
+
+        # Map entity to slug for injection
+        if hasattr(content, 'slug') and content.slug:
+            _entity_map[str(content.slug)] = entity
+
+        logger.debug(f"Processed {entity_type}: {metadata.get('title', 'Untitled')}")
     
-    entity_type = get_entity_type(category_name, _mappings)
-
-    # Convert to JSON-LD
-    entity = convert_metadata_to_jsonld(metadata, entity_type, _mappings)
-
-    # Store entity
-    _entities.append(entity)
-
-    # Map entity to slug for injection
-    if hasattr(content, 'slug'):
-        _entity_map[content.slug] = entity
-
-    logger.debug(f"Processed {entity_type}: {metadata.get('title', 'Untitled')}")
+    except Exception as e:
+        logger.error(f"Error processing content: {e}")
+        # Don't re-raise to prevent build failures
 
 
 def write_jsonld_files(pelican):
@@ -130,9 +135,10 @@ def write_jsonld_files(pelican):
     if export_individual:
         count = 0
         for slug, entity in _entity_map.items():
-            entity_path = os.path.join(output_dir, f"{slug}.json")
-            write_json_file(entity, entity_path, indent=2)
-            count += 1
+            if slug:  # Only process if slug is not None
+                entity_path = os.path.join(output_dir, f"{slug}.json")
+                write_json_file(entity, entity_path, indent=2)
+                count += 1
 
         logger.info(f"✅ Exported {count} individual entity files")
 
@@ -181,7 +187,7 @@ def inject_jsonld_into_content(content, content_path):
 
 def content_written_handler(path, context):
     """Handle content_written signal to inject JSON-LD."""
-    if not path.endswith('.html'):
+    if not path or not path.endswith('.html'):
         return
 
     try:

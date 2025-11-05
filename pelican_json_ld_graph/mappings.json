@@ -4,6 +4,8 @@
     "organizations": "Organization",
     "experience": "WorkExperience",
     "projects": "CreativeWork",
+    "presentations": "PresentationDigitalDocument",
+    "blog": "BlogPosting",
     "certifications": "EducationalOccupationalCredential"
   },
   "fields": {

@@ -15,7 +15,12 @@ DEFAULT_MAPPINGS = {
         "organizations": "Organization",
         "experience": "WorkExperience",
         "projects": "CreativeWork",
-        "certifications": "EducationalOccupationalCredential"
+        "presentations": "PresentationDigitalDocument",
+        "blog": "BlogPosting",
+        "certifications": "EducationalOccupationalCredential",
+        "education": "EducationalOccupationalCredential",
+        "service": "Role",
+        "accomplishments": "Thing"
     },
     "fields": {
         "title": "name",

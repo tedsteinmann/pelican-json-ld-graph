@@ -5,6 +5,8 @@ Generator module for JSON-LD graph creation
 import json
 import os
 import logging
+from urllib.parse import urljoin
+
 from pelican import signals
 from .utils import (
     load_mappings,
@@ -15,6 +17,119 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+def _clean_siteurl(siteurl):
+    """Normalize SITEURL by removing trailing slashes."""
+    return str(siteurl or '').rstrip('/')
+
+
+def _absolute_url(siteurl, path):
+    """Build absolute URLs consistently from SITEURL and a relative path."""
+    base = _clean_siteurl(siteurl) + '/'
+    return urljoin(base, str(path or '').lstrip('/'))
+
+
+def _build_root_graph():
+    """Build static root @graph entities for site-wide GEO context."""
+    global _settings
+
+    siteurl = _clean_siteurl(_settings.get('SITEURL', '') if _settings else '')
+    if not siteurl:
+        return {}
+
+    author = str(_settings.get('AUTHOR', 'Site Owner'))
+    sitename = str(_settings.get('SITENAME', siteurl))
+    description = str(_settings.get('SITEDESCRIPTION', _settings.get('DESCRIPTION', ''))).strip()
+
+    homepage_url = _absolute_url(siteurl, '/')
+    about_url = _absolute_url(siteurl, _settings.get('JSONLD_ABOUT_PATH', '/about.html'))
+    person_path = _settings.get('JSONLD_PERSON_PATH', '/people/ted-steinmann.html')
+    person_url = _absolute_url(siteurl, person_path)
+
+    person_id = f"{siteurl}/#person"
+    website_id = f"{siteurl}/#website"
+    profile_page_id = f"{about_url}#profile"
+    homepage_itemlist_id = f"{homepage_url}#featured-content"
+
+    featured_items = _settings.get('JSONLD_FEATURED_ITEMS', [
+        {'path': '/category/experience.html', 'name': 'Experience'},
+        {'path': '/category/projects.html', 'name': 'Projects'},
+        {'path': '/category/presentations.html', 'name': 'Presentations'},
+        {'path': '/category/blog.html', 'name': 'Blog'},
+    ])
+
+    item_list_elements = []
+    for index, item in enumerate(featured_items, start=1):
+        if not isinstance(item, dict):
+            continue
+        item_path = item.get('path')
+        item_name = item.get('name')
+        if not item_path or not item_name:
+            continue
+        item_list_elements.append({
+            '@type': 'ListItem',
+            'position': index,
+            'url': _absolute_url(siteurl, item_path),
+            'name': str(item_name),
+        })
+
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            {
+                '@type': 'Person',
+                '@id': person_id,
+                'name': author,
+                'url': person_url,
+                'mainEntityOfPage': {'@id': profile_page_id},
+            },
+            {
+                '@type': 'ProfilePage',
+                '@id': profile_page_id,
+                'url': about_url,
+                'name': f'About {author}',
+                'isPartOf': {'@id': website_id},
+                'mainEntity': {'@id': person_id},
+            },
+            {
+                '@type': 'WebSite',
+                '@id': website_id,
+                'url': homepage_url,
+                'name': sitename,
+                'description': description,
+                'publisher': {'@id': person_id},
+                'potentialAction': {
+                    '@type': 'SearchAction',
+                    'target': _absolute_url(siteurl, '/search.html?q={search_term_string}'),
+                    'query-input': 'required name=search_term_string',
+                },
+            },
+            {
+                '@type': 'ItemList',
+                '@id': homepage_itemlist_id,
+                'url': homepage_url,
+                'name': 'Featured Content',
+                'itemListOrder': 'https://schema.org/ItemListOrderAscending',
+                'numberOfItems': len(item_list_elements),
+                'itemListElement': item_list_elements,
+            },
+        ],
+    }
+
+
+def _inject_script_tag(html, script_tag):
+    """Inject a script tag before </head> or </body>."""
+    if '</head>' in html:
+        return html.replace('</head>', script_tag + '</head>', 1)
+    if '</body>' in html:
+        return html.replace('</body>', script_tag + '</body>', 1)
+    return html
+
+
+def _build_script_tag(payload, script_id):
+    json_str = json.dumps(payload, indent=2, ensure_ascii=False)
+    escaped_json = escape_json_for_html(json_str)
+    return f'\n<script id="{script_id}" type="application/ld+json">\n{escaped_json}\n</script>\n'
 
 # Global storage for entities across generators
 _entities = []
@@ -108,13 +223,10 @@ def process_content(content):
             url_value = str(content.url)
         
         if url_value:
-            # If it's already a full URL (starts with http/https), use it as-is
             if url_value.startswith(('http://', 'https://')):
                 metadata['url'] = url_value
             else:
-                # Otherwise, prepend the site URL
-                siteurl = _settings.get('SITEURL', '') or ''
-                metadata['url'] = f"{siteurl}/{url_value}" if siteurl else url_value
+                metadata['url'] = _absolute_url(_settings.get('SITEURL', ''), url_value)
 
         # Check for image in metadata
         if hasattr(content, 'metadata') and content.metadata:
@@ -123,15 +235,10 @@ def process_content(content):
                 siteurl = _settings.get('SITEURL', '') or ''
                 
                 # Handle image URLs - make relative paths absolute
-                if image_value.startswith('/'):
-                    # It's a relative path from site root, make it absolute
-                    metadata['image'] = f"{siteurl}{image_value}" if siteurl else image_value
-                elif image_value.startswith(('http://', 'https://')):
-                    # It's already a full URL, use as-is
+                if image_value.startswith(('http://', 'https://')):
                     metadata['image'] = image_value
                 else:
-                    # It's a relative path, assume it's from site root
-                    metadata['image'] = f"{siteurl}/{image_value}" if siteurl else image_value
+                    metadata['image'] = _absolute_url(siteurl, image_value)
 
         # Determine entity type from category
         category_name = None
@@ -169,11 +276,14 @@ def write_jsonld_files(pelican):
     """Write JSON-LD files after all content is processed."""
     global _entities, _entity_map, _settings, _output_path
 
-    if not _entities:
+    root_graph = _build_root_graph()
+    root_entities = root_graph.get('@graph', []) if root_graph else []
+
+    if not _entities and not root_entities:
         logger.info("No entities to export")
         return
 
-    logger.info(f"Starting JSON-LD graph generation with {len(_entities)} entities...")
+    logger.info(f"Starting JSON-LD graph generation with {len(_entities)} content entities and {len(root_entities)} root entities...")
 
     # Configuration
     jsonld_output_path = _settings.get('JSONLD_OUTPUT_PATH', 'jsonld')
@@ -183,7 +293,7 @@ def write_jsonld_files(pelican):
     # Write global graph
     graph = {
         "@context": "https://schema.org/",
-        "@graph": _entities
+        "@graph": [*root_entities, *_entities]
     }
 
     output_dir = os.path.join(_output_path, jsonld_output_path)
@@ -205,45 +315,30 @@ def write_jsonld_files(pelican):
 
 
 def inject_jsonld_into_content(content, content_path):
-    """
-    Inject JSON-LD script into HTML content.
-
-    Args:
-        content: HTML content string
-        content_path: Path to the content file
-
-    Returns:
-        str: Modified HTML with JSON-LD injected
-    """
+    """Inject root and per-page JSON-LD script tags into HTML content."""
     global _entity_map, _settings
 
     inject_enabled = _settings.get('JSONLD_INJECT', True)
     if not inject_enabled:
         return content
 
-    # Extract slug from path
+    modified = content
+
+    root_graph = _build_root_graph()
+    root_marker = 'id="root-schema-jsonld"'
+    if root_graph and root_marker not in modified:
+        modified = _inject_script_tag(modified, _build_script_tag(root_graph, 'root-schema-jsonld'))
+
+    # Extract slug from path for page-specific entity injection
     slug = os.path.splitext(os.path.basename(content_path))[0]
+    page_marker = 'id="page-schema-jsonld"'
 
-    if slug not in _entity_map:
-        return content
+    if slug in _entity_map and page_marker not in modified:
+        entity = _entity_map[slug]
+        modified = _inject_script_tag(modified, _build_script_tag(entity, 'page-schema-jsonld'))
+        logger.debug(f"Injected page JSON-LD for {slug}")
 
-    entity = _entity_map[slug]
-
-    # Generate JSON-LD script tag
-    json_str = json.dumps(entity, indent=2, ensure_ascii=False)
-    escaped_json = escape_json_for_html(json_str)
-    script_tag = f'\n<script type="application/ld+json">\n{escaped_json}\n</script>\n'
-
-    # Try to inject before </head>
-    if '</head>' in content:
-        content = content.replace('</head>', script_tag + '</head>', 1)
-        logger.debug(f"Injected JSON-LD into <head> for {slug}")
-    # Fallback to before </body>
-    elif '</body>' in content:
-        content = content.replace('</body>', script_tag + '</body>', 1)
-        logger.debug(f"Injected JSON-LD into <body> for {slug}")
-
-    return content
+    return modified
 
 
 def content_written_handler(path, context):

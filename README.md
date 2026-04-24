@@ -11,8 +11,8 @@ The plugin builds a global Schema.org graph (`graph.jsonld`) and optionally inje
 - 🔍 **Automatic JSON-LD generation** from Markdown frontmatter  
 - 🏷️ **Category-based type inference** (e.g., `Category: people` → `Person`, `Category: projects` → `CreativeWork`)  
 - 🧩 **Custom field mapping** via `mappings.json`  
-- 🧾 **Global JSON-LD graph export** at build time  
-- 💡 **Optional HTML injection** for per-page JSON-LD blocks  
+- 🧾 **Global JSON-LD graph export** at build time (including root entities)  
+- 💡 **Optional HTML injection** for per-page JSON-LD blocks plus a static root `@graph` block  
 - 🪶 Compatible with [Pelican 4.x+](https://docs.getpelican.com/)
 
 ---
@@ -118,7 +118,12 @@ The `mappings.json` file maps Pelican categories to Schema.org types:
     "organizations": "Organization",
     "experience": "WorkExperience",
     "projects": "CreativeWork",
-    "certifications": "EducationalOccupationalCredential"
+    "presentations": "PresentationDigitalDocument",
+    "blog": "BlogPosting",
+    "certifications": "EducationalOccupationalCredential",
+    "education": "EducationalOccupationalCredential",
+    "service": "Role",
+    "accomplishments": "Thing"
   },
   "fields": {
     "title": "name",

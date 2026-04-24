@@ -1,12 +1,15 @@
 {
   "categories": {
     "people": "Person",
-    "organization": "Organization",
+    "organizations": "Organization",
     "experience": "WorkExperience",
     "projects": "CreativeWork",
     "presentations": "PresentationDigitalDocument",
     "blog": "BlogPosting",
-    "certifications": "EducationalOccupationalCredential"
+    "certifications": "EducationalOccupationalCredential",
+    "education": "EducationalOccupationalCredential",
+    "service": "Role",
+    "accomplishments": "Thing"
   },
   "fields": {
     "title": "name",
